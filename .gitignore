@@ -1,0 +1,11 @@
+# virtual env
+.venv/
+
+# python cache
+__pycache__/
+
+# secrets
+.env
+
+# (OPTIONAL for safety) comment this if you want to exclude creds from GitHub:
+# credentials/google-creds.json
