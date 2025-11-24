@@ -8,4 +8,4 @@ __pycache__/
 .env
 
 # (OPTIONAL for safety) comment this if you want to exclude creds from GitHub:
-# credentials/google-creds.json
+credentials/google-creds.json
