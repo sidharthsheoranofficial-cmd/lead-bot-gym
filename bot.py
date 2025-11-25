@@ -2,7 +2,6 @@ import os
 import json
 from datetime import datetime
 
-from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -19,15 +18,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 
 # ============================================================
-# LOAD ENV VARIABLES
-# ============================================================
-load_dotenv()
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
-
-
-# ============================================================
-# GOOGLE SHEETS CONFIG (Render safe)
+# GOOGLE SHEETS CONFIG (Render + Webhook safe)
 # ============================================================
 def get_sheet():
     scope = [
@@ -43,7 +34,7 @@ def get_sheet():
     )
 
     client = gspread.authorize(creds)
-    sheet = client.open("google sheet leadbot").sheet1   # your sheet name
+    sheet = client.open("google sheet leadbot").sheet1
     return sheet
 
 
@@ -83,9 +74,7 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = update.message.text.strip()
 
     if not phone.isdigit() or len(phone) != 10:
-        await update.message.reply_text(
-            "❌ Invalid phone number. Please enter a 10-digit number."
-        )
+        await update.message.reply_text("❌ Invalid phone number. Enter 10 digits.")
         return ASK_PHONE
 
     context.user_data["phone"] = phone
@@ -95,6 +84,7 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Branch 2", callback_data="Branch 2")],
         [InlineKeyboardButton("Branch 3", callback_data="Branch 3")],
     ]
+
     await update.message.reply_text(
         "Which branch are you interested in?",
         reply_markup=InlineKeyboardMarkup(keyboard),
@@ -103,7 +93,7 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ============================================================
-# BRANCH PICKED
+# BRANCH SELECTED
 # ============================================================
 async def branch_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -111,7 +101,7 @@ async def branch_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["branch"] = query.data
 
-    services = [
+    keyboard = [
         [InlineKeyboardButton("Gym Trial", callback_data="Gym Trial")],
         [InlineKeyboardButton("Personal Training", callback_data="Personal Training")],
         [InlineKeyboardButton("Diet Plan", callback_data="Diet Plan")],
@@ -120,13 +110,13 @@ async def branch_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.edit_message_text(
         "Select the service you need:",
-        reply_markup=InlineKeyboardMarkup(services),
+        reply_markup=InlineKeyboardMarkup(keyboard),
     )
     return ASK_SERVICE
 
 
 # ============================================================
-# SERVICE PICKED → SAVE + NOTIFY ADMIN
+# SERVICE SELECTED → SAVE + NOTIFY ADMIN
 # ============================================================
 async def service_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -134,7 +124,6 @@ async def service_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["service"] = query.data
 
-    # save to sheet
     sheet = get_sheet()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -148,19 +137,17 @@ async def service_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
         timestamp, name, phone, service, branch, user_id
     ])
 
-    # tell user
     await query.edit_message_text(
         "🎉 *Thanks!* Your details were submitted successfully.\n\n"
         "Someone from the team will contact you soon.",
         parse_mode="Markdown",
     )
 
-    # notify admin
+    ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
     if ADMIN_CHAT_ID:
         try:
             await context.bot.send_message(
                 chat_id=int(ADMIN_CHAT_ID),
-                parse_mode="Markdown",
                 text=(
                     f"📢 *New Lead*\n"
                     f"Name: {name}\n"
@@ -170,15 +157,16 @@ async def service_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"User ID: {user_id}\n"
                     f"Time: {timestamp}"
                 ),
+                parse_mode="Markdown",
             )
-        except Exception:
-            pass  # avoid crashes
+        except:
+            pass
 
     return ConversationHandler.END
 
 
 # ============================================================
-# /leads_today
+# ADMIN COMMAND: /leads_today
 # ============================================================
 async def leads_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sheet = get_sheet()
@@ -194,9 +182,11 @@ async def leads_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ============================================================
-# MAIN
+# BUILD BOT APPLICATION
 # ============================================================
-def main():
+def build_bot_app():
+    TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     conv_handler = ConversationHandler(
@@ -213,9 +203,4 @@ def main():
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("leads_today", leads_today))
 
-    print("🤖 Lead Bot is running on Render...")
-    app.run_polling()
-
-
-if __name__ == "__main__":
-    main()
+    return app
