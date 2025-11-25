@@ -1,9 +1,4 @@
 python-telegram-bot==20.5
-gspread==6.0.2
-oauth2client==4.1.3
-python-dotenv==1.0.1
-pandas==2.2.2
-
-# VERY IMPORTANT — block the bad version Render keeps installing
-httpx==0.24.1
-h11==0.14.0
+gspread
+oauth2client
+python-dotenv
