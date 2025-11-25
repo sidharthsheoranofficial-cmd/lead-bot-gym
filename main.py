@@ -22,9 +22,9 @@ bot_app: Application = build_bot_app()
 
 @app.on_event("startup")
 async def set_webhook():
+    await bot_app.initialize()
     """Automatically set webhook when the server starts."""
     await bot_app.bot.set_webhook(url=WEBHOOK_URL)
-    await bot_app.initialize()
     print("Webhook set to:", WEBHOOK_URL)
 
 
