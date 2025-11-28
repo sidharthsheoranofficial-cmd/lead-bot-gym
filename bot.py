@@ -73,7 +73,7 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["name"] = update.message.text.strip()
 
     await update.message.reply_text(
-        "Great! Please enter your *phone number*.\nWe need it to contact you & confirm your trial.",
+        "Great! Please enter your *phone number*.\nWe need it to contact you & reach out to you.",
         parse_mode="Markdown",
     )
     return ASK_PHONE
